@@ -40,13 +40,34 @@ def experiment(seed):
   return scores
 
 
-def main(seeds=(0, 1, 2)):
-  results = [experiment(seed) for seed in seeds]
+def experiment_sort(seed):
+  """One seed of the sorting version: outputs alone, hard routing after."""
+  from goi import sort
+  from goi import run_sort
+  start = time.time()
+  feedback = adapter.sample('insertion_sort', 16, 1000, seed)
+  keys = adapter.input_data(feedback, 'key')
+  sorted_pos = np.argsort(keys, axis=1)
+  params = endtoend.train_sort(keys, sorted_pos, seed, steps=30000,
+                               tail=10000)
+  box = sort.predicate_box(params)
+  scores = {}
+  for split in run_sort.SPLITS:
+    scores[split] = run_sort.score(box, split)
+    print(f"  {split}: {scores[split]:.4f}")
+  print(f"  seed {seed} ({time.time() - start:.1f}s)")
+  return scores
+
+
+def main(seeds=(0, 1, 2), algorithm='minimum'):
+  run = experiment if algorithm == 'minimum' else experiment_sort
+  results = [run(seed) for seed in seeds]
   print(f"\nover seeds {seeds}, mean +- std of 100 * score:")
-  for split in SPLITS:
+  for split in results[0]:
     values = 100 * np.array([result[split] for result in results])
     print(f"  {split}: {values.mean():.2f} +- {values.std():.2f}")
 
 
 if __name__ == '__main__':
-  main()
+  import sys
+  main(algorithm=sys.argv[1] if len(sys.argv) > 1 else 'minimum')
