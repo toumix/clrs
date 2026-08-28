@@ -73,9 +73,10 @@ training trajectories, 32 validation, 32 out-of-distribution test
 trajectories at 64 nodes ([Veličković et al. 2022](https://arxiv.org/abs/2205.15659),
 §4). The best of the benchmark's five baselines reaches **87.71 ± 0.52**
 on this task (PGN; table 2 of the paper), and the later single-task
-state of the art is Triplet-GMPNN at 96.08 ± 2.07
-([Ibarz et al. 2022](https://arxiv.org/abs/2209.11142), table 2) —
-statistical par at n = 64, with essentially no further degradation at
+state of the art is Triplet-GMPNN at **97.78 ± 0.55**
+([Ibarz et al. 2022](https://arxiv.org/abs/2209.11142), table 2 —
+verified from the paper) — a little above the oracle-trained box at
+n = 64, which in exchange shows essentially no further degradation at
 n = 256, sixteen times the training size. Their baselines train one to
 thirty hours per task on a V100; everything here is minutes of CPU. The parameter
 counts are not at par: the predicate MLP is **322 parameters**, the whole
@@ -135,13 +136,16 @@ CLRS's pointer metric over seeds 0, 1, 2:
 
 The benchmark's own baselines reach at best **71.42 ± 0.86** on
 insertion sort and **73.58 ± 0.78** on bubble sort (Memnet; Veličković
-et al. 2022, table 2 — verified from the paper), with the later
-Triplet-GMPNN reported around 78 on insertion sort (Ibarz et al. 2022;
-that cell still to be re-checked). Bubble sort shares this experiment
+et al. 2022, table 2 — verified from the paper), and the later
+Triplet-GMPNN reaches **78.14 ± 4.64** on insertion sort and
+**67.68 ± 5.50** on bubble sort (Ibarz et al. 2022, table 2 — verified
+from the paper). Bubble sort shares this experiment
 verbatim: CLRS distinguishes the two sorts only through their hint
 trajectories, so a trace-free model scores them identically by
-construction — where the baselines pay measurably for bubble's longer
-trace. The far
+construction — where three of the four baselines pay measurably for
+bubble's longer trace (Triplet-GMPNN 78.14 → 67.68, PGN 44.37 → 6.01,
+MPNN 19.81 → 5.27); only Memnet, the weakest of them on insertion sort,
+is flat across the pair at 71.42 → 73.58. The far
 split degrades honestly and predictably: the minimal adjacent gap of n
 uniform keys shrinks like 1/n², so a fixed predicate band meets more
 unresolvable ties as n grows — the whole residual error is that band,
