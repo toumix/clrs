@@ -163,6 +163,45 @@ the algorithms share primitives**: every further comparator-family task
 costs zero new parameters, and the wiring is the task's input, not a
 model.
 
+## End to end: the primitive learned from outputs alone
+
+Everything above still hands the box its answers: the predicate trains
+against the reference comparator's per-visit labels. This rung removes
+that. The wiring is still given, the primitive is not -- the same MLPs,
+the same **322** and **1,538** parameters, trained through a soft
+relaxation of the routing itself, with CLRS's own output the only
+supervision. Each fold step mixes the running pair by the predicate's
+own probability, so the final position distribution is differentiable;
+the transposition network does the same at every compare-exchange. No
+oracle, no boundary labels, no hints. At test the routing is hard again
+and the trained predicate drops into the exact wiring unchanged.
+
+| split | `minimum` | `insertion_sort` |
+|---|---|---|
+| val, 32 × n=16 | 100.00 ± 0.00 | 100.00 ± 0.00 |
+| test, 32 × n=64 (CLRS protocol) | **97.92 ± 1.47** | **98.97 ± 0.12** |
+| wide test, 1000 × n=64 | 99.13 ± 0.26 | 98.83 ± 0.08 |
+| far, 32 × n=256 | 96.88 ± 0.00 | 95.52 ± 0.34 |
+
+Model seeds 0, 1, 2, scored by the same `clrs._src.evaluation.evaluate`.
+Both beat their own oracle-trained boxes at the protocol test -- 97.92
+against 95.83 on `minimum`, 98.97 against 96.24 on `insertion_sort` --
+and on the far split the network gains seven points, 95.52 against
+88.41. Weaker supervision scoring higher wants an explanation; the
+likeliest one is that the oracle weights every visit alike, including
+the near-ties whose resolution the fold never depends on, while the
+output loss weights a visit by the damage it does downstream. That is a
+reading of the numbers, not a measurement. What is measured is that the
+end-to-end predicate agrees with the comparator it was never shown on
+99.88--99.94% of the n = 64 traffic. The one split where it does not win
+is `minimum`'s far, 96.88 against 97.92.
+
+Against the literature this is `insertion_sort` at **98.97 ± 0.12**
+where the single-task state of the art is 78.14 ± 4.64 and the best
+benchmark baseline 71.42 ± 0.86, and `minimum` at par with its 97.78 ±
+0.55 -- from input-output pairs alone, in minutes of CPU: about 16
+seconds a seed for the fold, five minutes for the network.
+
 ## Run it
 
 Sampling goes through `clrs._src.samplers` on the fly, so the heavy
@@ -177,6 +216,9 @@ pip install git+https://github.com/discopy/discopy@main
 python -m goi.run_minimum     # ~75s per seed on CPU
 python -m goi.run_sort        # ~10min per seed on CPU
 python -m goi.run_controls    # ~15min on CPU
+python -m goi.run_endtoend         # minimum from outputs alone, ~16s per seed
+python -m goi.run_endtoend sort    # the network from outputs alone, ~5min per seed
+python -m goi.run_lcs              # lcs_length, with the truth-table diagnostics
 python -m pytest goi/minimum_test.py goi/sort_test.py
 ```
 
