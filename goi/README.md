@@ -44,7 +44,13 @@ published numbers, over model seeds 0, 1, 2:
 The published baseline on this task and protocol is Triplet-GMPNN at
 96.08 ± 2.07 ([Ibarz et al. 2022](https://arxiv.org/abs/2209.11142),
 table 2) — statistical par at n = 64, with essentially no further
-degradation at n = 256, sixteen times the training size. The learned
+degradation at n = 256, sixteen times the training size. The parameter
+counts are not at par: the predicate MLP is **322 parameters**, the whole
+learned model, against **392,892** for the single-task Triplet-GMPNN
+instantiated on the `minimum` spec with this repository's own defaults
+(`hidden_size=128`, `nb_triplet_fts=8`) — the baseline spends ~1,200×
+more parameters learning the dataflow that the wiring provides here for
+free. The learned
 predicate agrees with the reference on 99.91–99.97% of the n = 64
 traffic and all its errors lie in a band |key1 − key2| < 0.005; the
 residual score gap *is* that band, since the routing is exact.
