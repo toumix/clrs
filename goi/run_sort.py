@@ -20,38 +20,38 @@ SPLITS = {'val (n=16)': (16, 32, 43), 'test (n=64)': (64, 32, 44),
           'wide test (n=64)': (64, 1000, 45), 'far (n=256)': (256, 32, 46)}
 
 
-def score(box, split):
+def score(box, split, algorithm='insertion_sort'):
   length, batch_size, seed = SPLITS[split]
-  feedback = adapter.sample('insertion_sort', length, batch_size, seed)
+  feedback = adapter.sample(algorithm, length, batch_size, seed)
   keys = adapter.input_data(feedback, 'key')
   pointers = sort.predecessors(sort.run(box, keys))
   return adapter.score_pointer(feedback, 'pred', pointers)
 
 
-def experiment(seed):
+def experiment(seed, algorithm='insertion_sort'):
   """One seed: record, quotient, train, score. Returns the score dict."""
   start = time.time()
-  feedback = adapter.sample('insertion_sort', 16, 1000, seed)
+  feedback = adapter.sample(algorithm, 16, 1000, seed)
   keys = adapter.input_data(feedback, 'key')
   oracle = sort.RecordingOracle(sort.reference)
   pointers = sort.predecessors(sort.run(oracle, keys))
   assert adapter.score_pointer(feedback, 'pred', pointers) == 1.0
   n_visits = sum(visit[1][0].size for visit in oracle.visits)
   table = sort.rule_table(oracle.visits)
-  print(f"seed {seed}: the reference box run through the network is exact; "
-        f"{n_visits} visits collapse to {len(table)} rules")
+  print(f"{algorithm} seed {seed}: the reference box run through the "
+        f"network is exact; {n_visits} visits collapse to {len(table)} rules")
 
   predicate = sort.predicate_box(sort.train_predicate(oracle.visits, seed))
   scores = {}
   for split in SPLITS:
-    scores[split] = score(predicate, split)
+    scores[split] = score(predicate, split, algorithm)
     print(f"  {split}: predicate {scores[split]:.4f}")
   print(f"  ({time.time() - start:.1f}s)")
   return scores
 
 
-def main(seeds=(0, 1, 2)):
-  results = [experiment(seed) for seed in seeds]
+def main(seeds=(0, 1, 2), algorithm='insertion_sort'):
+  results = [experiment(seed, algorithm) for seed in seeds]
   print(f"\nover seeds {seeds}, mean +- std of 100 * score:")
   for split in SPLITS:
     values = 100 * np.array([result[split] for result in results])
@@ -59,4 +59,5 @@ def main(seeds=(0, 1, 2)):
 
 
 if __name__ == '__main__':
-  main()
+  import sys
+  main(algorithm=sys.argv[1] if len(sys.argv) > 1 else 'insertion_sort')
