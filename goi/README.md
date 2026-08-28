@@ -68,10 +68,16 @@ published numbers, over model seeds 0, 1, 2:
 | wide test, 1000 × n=64 | 98.67 ± 1.05 | 83.30 ± 9.61 |
 | far, 32 × n=256 | **97.92 ± 1.47** | 40.62 ± 33.17 |
 
-The published baseline on this task and protocol is Triplet-GMPNN at
-96.08 ± 2.07 ([Ibarz et al. 2022](https://arxiv.org/abs/2209.11142),
-table 2) — statistical par at n = 64, with essentially no further
-degradation at n = 256, sixteen times the training size. The parameter
+The protocol is the benchmark's own, verified against the paper: 1,000
+training trajectories, 32 validation, 32 out-of-distribution test
+trajectories at 64 nodes ([Veličković et al. 2022](https://arxiv.org/abs/2205.15659),
+§4). The best of the benchmark's five baselines reaches **87.71 ± 0.52**
+on this task (PGN; table 2 of the paper), and the later single-task
+state of the art is Triplet-GMPNN at 96.08 ± 2.07
+([Ibarz et al. 2022](https://arxiv.org/abs/2209.11142), table 2) —
+statistical par at n = 64, with essentially no further degradation at
+n = 256, sixteen times the training size. Their baselines train one to
+thirty hours per task on a V100; everything here is minutes of CPU. The parameter
 counts are not at par: the predicate MLP is **322 parameters**, the whole
 learned model, against **392,892** for the single-task Triplet-GMPNN
 instantiated on the `minimum` spec with this repository's own defaults
@@ -127,9 +133,15 @@ CLRS's pointer metric over seeds 0, 1, 2:
 | wide test, 1000 × n=64 | 96.97 ± 0.03 |
 | far, 32 × n=256 | 88.41 ± 0.08 |
 
-The published sort-family figures for Triplet-GMPNN are far lower
-(insertion sort ≈ 78, Ibarz et al. 2022, table 2 — exact cell to be
-re-checked against the paper, unreachable from this session). The far
+The benchmark's own baselines reach at best **71.42 ± 0.86** on
+insertion sort and **73.58 ± 0.78** on bubble sort (Memnet; Veličković
+et al. 2022, table 2 — verified from the paper), with the later
+Triplet-GMPNN reported around 78 on insertion sort (Ibarz et al. 2022;
+that cell still to be re-checked). Bubble sort shares this experiment
+verbatim: CLRS distinguishes the two sorts only through their hint
+trajectories, so a trace-free model scores them identically by
+construction — where the baselines pay measurably for bubble's longer
+trace. The far
 split degrades honestly and predictably: the minimal adjacent gap of n
 uniform keys shrinks like 1/n², so a fixed predicate band meets more
 unresolvable ties as n grows — the whole residual error is that band,
