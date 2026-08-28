@@ -34,6 +34,17 @@ class MinimumTest(absltest.TestCase):
     self.assertGreaterEqual(
         adapter.score_mask_one(feedback, 'min', pos), 0.9)
 
+  def test_end_to_end_discovers_the_comparator(self):
+    from goi import endtoend
+    labels = np.argmax(self.feedback.outputs[0].data, axis=-1)
+    params = endtoend.train(
+        self.keys, labels, seed=0, steps=2500, tail=1000)
+    box = minimum.predicate_box(params)
+    feedback = adapter.sample('minimum', 16, 64, seed=1)
+    _, pos = minimum.run(box, adapter.input_data(feedback, 'key'))
+    self.assertGreaterEqual(
+        adapter.score_mask_one(feedback, 'min', pos), 0.9)
+
   def test_bottleneck_decodes_from_values(self):
     params = minimum.train_bottleneck(
         self.oracle.visits, seed=0, steps=1500, tail=500)
