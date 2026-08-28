@@ -1,13 +1,16 @@
 """Controls for the `minimum` result, answering "you hard-coded it".
 
 Two axes. Parameters: the same predicate MLP widened to exactly the
-Triplet-GMPNN budget gains nothing, and the baseline architecture cannot
-be instantiated anywhere near 322 parameters, so the ratio is structural.
-Wiring: the same 322-parameter box run on a balanced tournament instead
-of the left comb still scores -- the wiring prior is associativity, which
-any correct fold shape satisfies -- while a wiring that folds only half
-the keys collapses to chance, so the wiring carries exactly the
-algorithmic information we claim it does, no more and no less.
+Triplet-GMPNN budget gains nothing, so the ratio is structural rather
+than a tuning artefact; the reverse direction is reported rather than
+settled -- the baseline *can* be instantiated at hidden dimension one
+(82 parameters), it just cannot represent the task there, and training
+that control is future work. Wiring: the same 322-parameter box run on a
+balanced tournament instead of the left comb scores identically -- the
+wiring prior is associativity, which any correct fold shape satisfies --
+while a wiring that folds only half the keys collapses to chance, so the
+wiring carries exactly the algorithmic information we claim it does, no
+more and no less.
 """
 
 import numpy as np
