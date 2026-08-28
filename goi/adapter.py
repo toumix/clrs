@@ -46,3 +46,22 @@ def score_mask_one(feedback, name, indices):
       name=name, location=specs.Location.NODE, type_=specs.Type.MASK_ONE,
       data=mask_one(indices, length))
   return evaluation.evaluate(feedback.outputs, {name: prediction})['score']
+
+
+def score_pointer(feedback, name, pointers):
+  """CLRS's own score for a pointer output predicted as indices.
+
+  A `should_be_permutation` truth is relabelled to plain pointers, the
+  `enforce_permutations=False` branch of `samplers.process_permutations`.
+  """
+  outputs = tuple(
+      probing.DataPoint(
+          name=data_point.name, location=data_point.location,
+          type_=specs.Type.POINTER, data=data_point.data)
+      if data_point.type_ == specs.Type.SHOULD_BE_PERMUTATION
+      else data_point for data_point in feedback.outputs)
+  truth_dtype = feedback.outputs[0].data.dtype
+  prediction = probing.DataPoint(
+      name=name, location=specs.Location.NODE, type_=specs.Type.POINTER,
+      data=np.asarray(pointers, dtype=truth_dtype))
+  return evaluation.evaluate(outputs, {name: prediction})['score']

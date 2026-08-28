@@ -42,15 +42,31 @@ def fold(length):
   return diagram
 
 
+def evaluate(functor, diagram, wires):
+  """Apply a functor to a diagram one layer at a time.
+
+  By functoriality this agrees with applying it to the whole diagram,
+  while keeping the Python call depth flat for deep diagrams.
+  """
+  for layer in diagram.inside:
+    stage = functor(type(diagram)((layer, ), layer.dom, layer.cod))(*wires)
+    wires = stage if isinstance(stage, tuple) else (stage, )
+  return wires
+
+
+def pair_wires(keys):
+  """The initial wires of a batch of keys: one key, position pair each."""
+  batch_size, length = keys.shape
+  return [wire for j in range(length)
+          for wire in (keys[:, j], np.full(batch_size, j))]
+
+
 def run(box, keys):
   """Run the fold diagram on a batch of keys with `box` as `min2`."""
-  batch_size, length = keys.shape
   functor = symmetric.Functor(
       ob_map={KEY: object, POS: object},
       ar_map={MIN2: box}, cod=python.Function)
-  args = [wire for j in range(length)
-          for wire in (keys[:, j], np.full(batch_size, j))]
-  return functor(fold(length))(*args)
+  return evaluate(functor, fold(keys.shape[1]), pair_wires(keys))
 
 
 def reference(key1, pos1, key2, pos2):
