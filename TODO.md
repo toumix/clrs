@@ -8,12 +8,12 @@ The plan being executed here, stage 1: [discopy#678](https://github.com/discopy/
 - [x] CI on [discopy#677](https://github.com/discopy/discopy/pull/677) and
   [discopy#401](https://github.com/discopy/discopy/pull/401) checked green, both re-subscribed,
   #677 marked ready for review
-- [ ] An adapter pulling data and reference traces from `clrs._src.samplers`,
+- [x] An adapter pulling data and reference traces from `clrs._src.samplers`,
   without the heavy dataset dependencies
-- [ ] One task end to end as a map neural network: the wiring is the algorithm,
+- [x] One task end to end as a map neural network: the wiring is the algorithm,
   only the primitive boxes are learned
-- [ ] Oracle labelling at box boundaries, rule tables quotiented over key values,
+- [x] Oracle labelling at box boundaries, rule tables quotiented over key values,
   per-box MLPs trained in CPU JAX
-- [ ] Train at n=16, test at n=64, scored with CLRS's own metric
+- [x] Train at n=16, test at n=64, scored with CLRS's own metric
   next to the published baselines
 - [ ] Draft PR on `toumix/clrs`, hand-off updated on the memory day PR
