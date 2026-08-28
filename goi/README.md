@@ -17,6 +17,21 @@ see n. The division of labour is stated plainly: the boxes are learned,
 the wiring is given, and the controls below measure exactly what the
 given wiring contributes.
 
+Framed fairly against the field: it is well established that more
+structure makes neural algorithmic solvers better (algorithmic
+alignment, the NAR blueprint, and the hint trajectories themselves are
+structure supplied through the loss), and the open difficulty is the
+tradeoff between structure and generality. The baselines deliberately
+sit mid-axis -- one processor for thirty algorithms. This experiment
+charts the *endpoint* of the structure axis, which that literature
+discusses but had not measured: what maximal structure buys (exactness,
+orders of magnitude fewer parameters, out-of-distribution behaviour by
+construction) and what it costs (a given wiring per task). The
+contribution beyond the endpoint is evidence that it costs less
+generality than assumed: the primitive is learnable from input-output
+pairs alone, it transfers across tasks zero-shot, and the wiring is the
+one given left, with parsing as the path to learning it.
+
 The wirings, drawn by [DisCoPy](https://github.com/discopy/discopy) at
 five pairs — the left-comb fold of `minimum`, the odd-even transposition
 network of `insertion_sort`, and the balanced tournament of the wiring
