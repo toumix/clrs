@@ -202,6 +202,58 @@ benchmark baseline 71.42 ± 0.86, and `minimum` at par with its 97.78 ±
 0.55 -- from input-output pairs alone, in minutes of CPU: about 16
 seconds a seed for the fold, five minutes for the network.
 
+## `lcs_length`: exact on two seeds in three
+
+The dynamic-programming grid is the wiring, and the whole interface of
+its one cell is bits. Neighbouring LCS counts differ by at most one, so
+the cell reads `(match, up_delta, left_delta)` and returns the direction
+`b`, from which the outgoing deltas are exact arithmetic. Zero-padding
+the grid makes CLRS's special-cased first row and column instances of
+the same rule, so the task is one cell box of exactly **eight rules**
+and one character equality box of **sixteen**, both finite: size
+generalization is structural, and no wire ever carries a quantity that
+grows with the input. The recurrence in this delta form is checked
+against CLRS's own `b` output on every run, and the cell's recorded
+traffic collapses to those eight rules and no more.
+
+Trained end to end on the `b` output alone -- soft routing through the
+grid, hard routing in the exact recurrence at test -- for 30,000 steps:
+
+| seed | val, n=16 | test, n=64 | far, n=256 | what it settled on |
+|---|---|---|---|---|
+| 0 | 100.00 | **100.00** | 100.00 | both tables exact, `not-equal` convention |
+| 1 | 24.95 | 24.66 | 24.95 | the cell collapsed to the constant `b = 0` |
+| 2 | 100.00 | **100.00** | 100.00 | both tables exact, `equal` convention |
+
+Two seeds in three recover the recurrence *exactly* -- all eight cell
+rules and all sixteen equality entries -- and an exact recurrence is
+exact at any size, which is why n = 256 costs nothing at all. The
+single-task state of the art here is Triplet-GMPNN at **80.51 ± 1.84**
+and the best of the benchmark's own baselines is GAT at **57.88 ± 1.02**
+(Ibarz et al. 2022 and Veličković et al. 2022, table 2 of each --
+verified from the papers). A seed that converges is at 100.00.
+
+The third seed is not a near miss but a different animal: the cell box
+settles on the constant `b = 0`, right on all four `match = 1` rows and
+wrong on all four `match = 0` rows. That is worth exactly the share of
+matching visits -- **24.66% predicted against 24.66% measured** at
+n = 64. Nor is it a matter of unseen rules: all eight rows are exercised
+in training, the rarest, `(1, 1, 1)`, at 0.31% of 64,000 visits, and it
+merely triples to 0.94% at n = 64. So the open problem is not capacity,
+not coverage and not generalization but optimization reliability -- the
+basin is found or it is not. Averaged over the three seeds the task
+reads 74.89 ± 35.52, a figure whose spread is bimodality rather than an
+error bar; the per-seed table is the honest form.
+
+One note for reading the diagnostics: the output loss does not pin the
+equality box's polarity. A run that learns `not equal` and flips its
+cell rules to match composes to the same grid and scores identically.
+Seed 0 is exactly such a run, and against the reference labels taken
+literally it reports 16/16 and all eight entries wrong -- a perfect
+solution presented as a total failure. `goi.run_lcs` now detects the
+polarity and reads the cell table in whichever convention the equality
+box chose.
+
 ## Run it
 
 Sampling goes through `clrs._src.samplers` on the fly, so the heavy
@@ -224,11 +276,18 @@ python -m pytest goi/minimum_test.py goi/sort_test.py
 
 ## Next, per the staged plan
 
-`bubble_sort` is free (the same network and box family), then
-`lcs_length` or `matrix_chain_order` (message passing on a grid map,
-with its own small cell primitive joining the library), then
-`binary_search` as the feedback/stream instance, where the control flow
-is data-dependent and no static wiring is the algorithm. Beyond that,
+`bubble_sort` is free (the same network and box family) and
+`lcs_length` is done above, leaving one thing owed on it: the seed that
+collapses. The cell's basin is reached twice in three tries and the
+failure is a clean constant, so the lever is the optimizer and the row
+weighting, not the wiring -- oversampling the scarce rows or annealing
+the routing are the obvious first tries. Then `matrix_chain_order` (the
+same sampler and the same DP family, its delta-form question still
+open), and then `binary_search` as the feedback/stream instance, where
+the control flow is data-dependent and no static wiring is the
+algorithm -- there its state is **a wire iterated by `feedback`/`stream`
+and not the para diagonal**, per the ruling on
+[discopy#683](https://github.com/discopy/discopy/issues/683). Beyond that,
 the wiring itself becomes the learned object: a map's wiring is a
 perfect matching on typed ports — exactly a proof net's axiom linking —
 so predicting it is parsing, with DisCoPy's map validation as the
