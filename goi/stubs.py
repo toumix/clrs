@@ -47,6 +47,7 @@ def install():
   if _missing('tensorflow'):
     tensorflow = _StubModule('tensorflow')
     tensorflow.Tensor = type('Tensor', (), {})
+    tensorflow.is_tensor = lambda value: False
     sys.modules['tensorflow'] = tensorflow
   if _missing('tensorflow_datasets'):
     tfds = _StubModule('tensorflow_datasets')
