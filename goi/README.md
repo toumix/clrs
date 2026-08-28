@@ -1,7 +1,7 @@
 # Map neural networks on CLRS
 
 Stage 1 of [discopy#678](https://github.com/discopy/discopy/issues/678):
-the beachhead adapter and one task end to end, porting the
+the beachhead adapter and the first two tasks end to end, porting the
 geometry-of-interaction learning pipeline of
 [discopy#677](https://github.com/discopy/discopy/pull/677) from Church
 arithmetic to the [CLRS Algorithmic Reasoning
@@ -13,15 +13,27 @@ is the algorithm**, and only the primitive boxes are learned, supervised
 at their own boundaries from the reference implementation's traffic.
 CLRS's test axis — train at n = 16, test out of distribution at n = 64 —
 then probes structure the model has by construction: the boxes never
-see n.
+see n. The division of labour is stated plainly: the boxes are learned,
+the wiring is given, and the controls below measure exactly what the
+given wiring contributes.
+
+The wirings, drawn by [DisCoPy](https://github.com/discopy/discopy) at
+five pairs — the left-comb fold of `minimum`, the odd-even transposition
+network of `insertion_sort`, and the balanced tournament of the wiring
+control:
+
+![the left-comb fold](minimum-fold.svg)
+![the odd-even transposition network](sort-network.svg)
+![the balanced tournament](tree-fold.svg)
 
 ## The `minimum` task
 
-CLRS's reference `minimum` is a left fold of one comparison. Here it is
-the left-comb diagram over one generator `min2 : pair @ pair -> pair` in
-the free symmetric monoidal category (a pair is a key wire and a
-position wire), run by a [DisCoPy](https://github.com/discopy/discopy)
-functor into Python functions with JAX arrays on the wires.
+CLRS's reference `minimum` is a left fold of one comparison, here the
+left-comb diagram over one generator `min2 : pair @ pair -> pair` in the
+free symmetric monoidal category (a pair is a key wire and a position
+wire), run by a DisCoPy functor into Python functions with JAX arrays on
+the wires — applied one layer at a time, which agrees by functoriality
+and keeps the call depth flat.
 
 The first thing #678 asked to establish — comparator keys are
 real-valued, so the rule tables must quotient over key values — holds on
@@ -50,21 +62,75 @@ learned model, against **392,892** for the single-task Triplet-GMPNN
 instantiated on the `minimum` spec with this repository's own defaults
 (`hidden_size=128`, `nb_triplet_fts=8`) — the baseline spends ~1,200×
 more parameters learning the dataflow that the wiring provides here for
-free. The learned
-predicate agrees with the reference on 99.91–99.97% of the n = 64
-traffic and all its errors lie in a band |key1 − key2| < 0.005; the
-residual score gap *is* that band, since the routing is exact.
-
-The ablation is the same wiring with the box regressing the smaller key
-instead of routing — the pointer must be decoded back from the predicted
-value, and accumulated value error collapses out of distribution. The
+free. The learned predicate agrees with the reference on 99.91–99.97% of
+the n = 64 traffic and all its errors lie in a band |key1 − key2| < 0.005;
+since routing is exact, the residual score gap *is* that band. The
+ablation — the same wiring with the box regressing the smaller key, the
+pointer decoded back from the value — collapses out of distribution: the
 discrete interface is what generalizes.
 
-Honest mismatches, as recorded in #678: this scores CLRS's output
-metric only — per-box visits are supervision at box boundaries, not
-CLRS's hint trajectories — and `minimum` is the multiplicative instance
-of the map-neural-network statement, not the lambda-calculus machine
-of #677, which stays the theory exhibit.
+## Controls: what the given wiring does and does not smuggle in
+
+`python -m goi.run_controls` (seed 0):
+
+| model | test (n=64) | wide (n=64) | far (n=256) |
+|---|---|---|---|
+| 322-parameter predicate, left comb | 96.88 | 99.20 | 96.88 |
+| **392,892**-parameter predicate, left comb | 93.75 | 98.90 | 100.00 |
+| 322-parameter predicate, **balanced tournament** | 96.88 | 99.20 | 96.88 |
+| 322-parameter predicate, **half the keys folded** | 46.88 | 48.50 | 56.25 |
+
+Widening the predicate to exactly the baseline's budget gains nothing,
+so the 1,200× ratio is structural, not tuning. The same box moved to a
+different *correct* wiring scores identically — the wiring prior is
+associativity, which any correct fold shape satisfies — while a wiring
+that folds only half the keys collapses to chance: the wiring carries
+exactly the algorithmic information claimed, no more and no less. One
+honest asymmetry: the reverse parameter match is reported, not settled —
+the smallest *instantiable* Triplet-GMPNN is 82 parameters at hidden
+dimension one, where it cannot represent the task; training that control
+is future work.
+
+## The `insertion_sort` task
+
+CLRS scores sorting at the function level: each node's predecessor in
+sorted order, trace-independent. The wiring is the odd-even transposition
+network — `length` alternating layers of one compare-exchange generator
+`sort2 : pair @ pair -> pair @ pair` — and the recorded traffic quotients
+exactly as before: 120,000 visits collapse to **two rules** (pass or
+exchange) keyed by the same predicate `key1 > key2`. Sorting is the
+stress test of the one caveat above: it must resolve *every* adjacent
+pair of the sorted order, however close, so the predicate reads the
+difference of its two keys explicitly (an affine re-encoding) and trains
+longer — **1,538 parameters**, still ~255× under the baseline. Scored by
+CLRS's pointer metric over seeds 0, 1, 2:
+
+| split | predicate box |
+|---|---|
+| val, 32 × n=16 | 100.00 ± 0.00 |
+| test, 32 × n=64 (CLRS protocol) | **96.24 ± 0.00** |
+| wide test, 1000 × n=64 | 96.97 ± 0.03 |
+| far, 32 × n=256 | 88.41 ± 0.08 |
+
+The published sort-family figures for Triplet-GMPNN are far lower
+(insertion sort ≈ 78, Ibarz et al. 2022, table 2 — exact cell to be
+re-checked against the paper, unreachable from this session). The far
+split degrades honestly and predictably: the minimal adjacent gap of n
+uniform keys shrinks like 1/n², so a fixed predicate band meets more
+unresolvable ties as n grows — the whole residual error is that band,
+since the exchange routing is exact.
+
+## One comparator, two algorithms
+
+The two tasks do not just use similar boxes — their traffic quotients to
+the *same* predicate. Deployed **zero-shot** in `minimum`'s wiring, the
+sort-trained predicate scores 100.00 / 93.75 / 99.20 / 96.88 across the
+four splits, indistinguishable from the natively trained one. The
+multi-task claim for map neural networks is therefore not one monolithic
+processor but **one library of learned primitives, shared exactly where
+the algorithms share primitives**: every further comparator-family task
+costs zero new parameters, and the wiring is the task's input, not a
+model.
 
 ## Run it
 
@@ -75,15 +141,23 @@ registers import-time placeholders for them.
 ```shell
 python -m venv .venv && . .venv/bin/activate
 pip install numpy jax attrs absl-py chex dm-haiku optax ml_collections \
-    six opt-einsum pytest
+    six opt-einsum matplotlib pytest
 pip install git+https://github.com/discopy/discopy@main
-python -m goi.run_minimum   # ~75s per seed on CPU
-python -m pytest goi/minimum_test.py
+python -m goi.run_minimum     # ~75s per seed on CPU
+python -m goi.run_sort        # ~10min per seed on CPU
+python -m goi.run_controls    # ~15min on CPU
+python -m pytest goi/minimum_test.py goi/sort_test.py
 ```
 
 ## Next, per the staged plan
 
-`insertion_sort`/`bubble_sort` (comparator maps), `lcs_length` or
-`matrix_chain_order` (message passing on a grid map), then
-`binary_search` as the feedback/stream instance, where data-dependent
-routing is the token machine's native mode.
+`bubble_sort` is free (the same network and box family), then
+`lcs_length` or `matrix_chain_order` (message passing on a grid map,
+with its own small cell primitive joining the library), then
+`binary_search` as the feedback/stream instance, where the control flow
+is data-dependent and no static wiring is the algorithm. Beyond that,
+the wiring itself becomes the learned object: a map's wiring is a
+perfect matching on typed ports — exactly a proof net's axiom linking —
+so predicting it is parsing, with DisCoPy's map validation as the
+correctness criterion and the exact executor as a sharp scorer of
+candidate wirings.
