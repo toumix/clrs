@@ -65,3 +65,11 @@ def score_pointer(feedback, name, pointers):
       name=name, location=specs.Location.NODE, type_=specs.Type.POINTER,
       data=np.asarray(pointers, dtype=truth_dtype))
   return evaluation.evaluate(outputs, {name: prediction})['score']
+
+
+def score_categorical(feedback, name, data):
+  """CLRS's own score for an edge-categorical output, given as one-hot."""
+  prediction = probing.DataPoint(
+      name=name, location=specs.Location.EDGE, type_=specs.Type.CATEGORICAL,
+      data=data)
+  return evaluation.evaluate(feedback.outputs, {name: prediction})['score']
